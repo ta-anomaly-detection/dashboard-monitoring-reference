@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  web-server-reference-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: web-server-reference-app
+    depends_on:
+      - web-server-reference-db
+    environment:
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    networks:
+      - dashboard-reference-network
+
+  web-server-reference-db:
+    image: postgres:15
+    container_name: web-server-reference-db
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    networks:
+      - dashboard-reference-network
+
+  nginx:
+    image: nginx:latest
+    container_name: web-server-reference-nginx
+    depends_on:
+      - web-server-reference-app
+    ports:
+      - "81:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - app-data:/var/log/nginx 
+    restart: unless-stopped
+    networks:
+      - dashboard-reference-network
+  
+  flume:
+    build:
+      context: ./flume
+      dockerfile: Dockerfile.flume
+    container_name: flume-agent
+    depends_on:
+      - nginx
+    volumes:
+      - ./flume/flume.conf:/flume/conf/flume.conf:ro
+      - app-data:/var/log/nginx:ro 
+    environment:
+      - FLUME_JAVA_OPTS=-Xms512m -Xmx1024m
+    networks:
+      - dashboard-reference-network
+    healthcheck:
+      test: ["CMD", "netstat", "-tupln"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  app-data: {}
+  pgdata: {}
+
+networks:
+  dashboard-reference-network:
+    name: dashboard-reference-network
+    driver: bridge
+

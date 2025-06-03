@@ -1,0 +1,34 @@
+FROM openjdk:11-slim
+
+# Install required packages
+RUN apt-get update && \
+    apt-get install -y wget curl procps net-tools && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Set Flume version
+ENV FLUME_VERSION 1.11.0
+
+# Download and extract Flume
+RUN wget -q https://downloads.apache.org/flume/${FLUME_VERSION}/apache-flume-${FLUME_VERSION}-bin.tar.gz && \
+    tar -xzf apache-flume-${FLUME_VERSION}-bin.tar.gz -C /opt && \
+    rm apache-flume-${FLUME_VERSION}-bin.tar.gz && \
+    ln -s /opt/apache-flume-${FLUME_VERSION}-bin /opt/flume
+
+# Set environment variables
+ENV FLUME_HOME /opt/flume
+ENV PATH $FLUME_HOME/bin:$PATH
+
+# Create directories for config and logs
+RUN mkdir -p /flume/conf /flume/data /flume/logs /flume/lib
+
+# Make sure we have the Kafka connector
+RUN cp $FLUME_HOME/lib/flume-ng-sdk-${FLUME_VERSION}.jar /flume/lib/ && \
+    cp $FLUME_HOME/lib/flume-ng-configuration-${FLUME_VERSION}.jar /flume/lib/ && \
+    cp $FLUME_HOME/lib/flume-ng-core-${FLUME_VERSION}.jar /flume/lib/
+
+# Set working directory
+WORKDIR /flume
+
+# Run Flume agent when container starts
+ENTRYPOINT ["flume-ng", "agent", "--conf", "/flume/conf", "--conf-file", "/flume/conf/flume.conf", "--name", "agent", "-Dflume.root.logger=INFO,console"]
