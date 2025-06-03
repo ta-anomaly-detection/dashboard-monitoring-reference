@@ -1,0 +1,46 @@
+version: '3.7'
+services:
+
+  jobmanager:
+    image: flink:1.18
+    networks:
+      - dashboard-reference-network
+    ports:
+      - 8081:8081
+    environment:
+      FLINK_PROPERTIES: "jobmanager.rpc.address: jobmanager"
+    command: jobmanager
+
+  taskmanager:
+    image: flink:1.18
+    networks:
+      - dashboard-reference-network
+    environment:
+      FLINK_PROPERTIES: "jobmanager.rpc.address: jobmanager"
+    command: taskmanager
+
+  app:
+    image: flink-app
+    build:
+      context: .
+    environment:
+      KAFKA_BROKER: kafka-server-reference:9092
+      KAFKA_TOPIC: web-server-reference-logs
+      SINK_DIR: /sink
+    depends_on:
+      - jobmanager
+      - taskmanager
+    volumes:
+      - ./sink:/sink
+      # - ./flink_with_python/app.py:/taskscripts/app.py
+    entrypoint:
+      - tail
+    command: 
+      - -f
+      - /dev/null
+    networks:
+      - dashboard-reference-network
+
+networks:
+  dashboard-reference-network:
+    external: true

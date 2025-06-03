@@ -1,0 +1,88 @@
+import requests
+import json
+import logging
+
+from pyflink.common import WatermarkStrategy, Row
+from pyflink.common.serialization import SimpleStringSchema
+from pyflink.common.typeinfo import Types
+from pyflink.datastream import StreamExecutionEnvironment
+from pyflink.datastream.connectors.kafka import KafkaOffsetsInitializer, KafkaSource
+from pyflink.datastream.connectors.jdbc import JdbcSink, JdbcConnectionOptions, JdbcExecutionOptions
+from pyflink.datastream.functions import MapFunction
+from pyflink.table import StreamTableEnvironment
+from pyflink.table.expressions import col
+
+from config import (
+    KAFKA_BROKER,
+    KAFKA_TOPIC,
+    CLICKHOUSE_HOST,
+    CLICKHOUSE_PORT,
+    CLICKHOUSE_DB,
+    CLICKHOUSE_TABLE,
+    CLICKHOUSE_USER,
+    CLICKHOUSE_PASSWORD,
+    print_configuration
+)
+from udfs import (
+    register_udfs,
+    parse_log
+)
+
+from utils import clean_ts
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s [%(levelname)s] %(name)s - %(message)s"
+)
+
+def kafka_sink_example():
+    env = StreamExecutionEnvironment.get_execution_environment()
+
+    env.add_jars("file:///jars/flink-sql-connector-kafka-3.0.1-1.18.jar")
+    env.add_jars("file:///jars/flink-connector-jdbc-3.1.2-1.17.jar")
+    env.add_jars("file:///jars/clickhouse-jdbc-0.4.6-all.jar")
+
+    print_configuration()
+
+    t_env = StreamTableEnvironment.create(env)
+
+    register_udfs(t_env)
+
+    kafka_source = KafkaSource.builder() \
+        .set_bootstrap_servers(KAFKA_BROKER) \
+        .set_topics(KAFKA_TOPIC) \
+        .set_group_id("flink_group") \
+        .set_starting_offsets(KafkaOffsetsInitializer.earliest()) \
+        .set_value_only_deserializer(SimpleStringSchema()) \
+        .build()
+
+    ds = env.from_source(kafka_source, watermark_strategy=None, source_name="Kafka Source")
+
+    # Convert to table with one column: line
+    t_env.create_temporary_view("raw_logs", t_env.from_data_stream(ds).alias("line"))
+
+    table = t_env.sql_query("""
+        SELECT 
+            parsed['ip'] AS ip,
+            parsed['time'] AS time,
+            parsed['method'] AS method,
+            parsed['url'] AS url,
+            parsed['param'] AS param,
+            parsed['protocol'] AS protocol,
+            parsed['responseTime'] AS response_time,
+            parsed['responseCode'] AS response_code,
+            parsed['responseByte'] AS response_byte,
+            parsed['user-agent'] AS user_agent
+        FROM (
+            SELECT parse_log(line) AS parsed
+            FROM raw_logs
+        )
+    """)
+    
+    t_env.to_data_stream(table).print()
+
+    env.execute("Kafka to ClickHouse JDBC Job")
+
+
+if __name__ == "__main__":
+    kafka_sink_example()
