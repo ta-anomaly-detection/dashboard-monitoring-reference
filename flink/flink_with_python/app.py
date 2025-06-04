@@ -1,6 +1,8 @@
 import json
 import logging
 import redis
+import time
+import uuid
 
 from pyflink.common import WatermarkStrategy, Row
 from pyflink.common.serialization import SimpleStringSchema
@@ -8,7 +10,7 @@ from pyflink.common.typeinfo import Types
 from pyflink.datastream import StreamExecutionEnvironment
 from pyflink.datastream.connectors.kafka import KafkaOffsetsInitializer, KafkaSource
 from pyflink.datastream.connectors.jdbc import JdbcSink, JdbcConnectionOptions, JdbcExecutionOptions
-from pyflink.datastream.functions import MapFunction, SinkFunction
+from pyflink.datastream.functions import MapFunction, ProcessFunction
 from pyflink.table import StreamTableEnvironment
 from pyflink.table.expressions import col
 
@@ -28,31 +30,48 @@ from udfs import (
 from utils import clean_ts
 
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s - %(message)s"
 )
 
 
-class RedisSinkFunction(SinkFunction):
+class RedisProcessFunction(ProcessFunction):
     def __init__(self):
-        self.redis_client = redis.Redis(
-            host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB)
+        self.redis_client = None
+        self.counter = 0
+    
+    def open(self, runtime_context):
+        try:
+            self.redis_client = redis.Redis(
+                host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB)
+            ping_result = self.redis_client.ping()
+            logging.info(f"Connected to Redis at {REDIS_HOST}:{REDIS_PORT}, ping result: {ping_result}")
+        except Exception as e:
+            logging.error(f"Failed to connect to Redis: {str(e)}", exc_info=True)
+            # Still assign a client so the job doesn't fail, but it won't work
+            self.redis_client = None
 
-    def invoke(self, value, context=None):
+    def process_element(self, value, ctx):
         try:
             data = {k: v for k, v in zip(value._fields, value)}
-
-            key = f"log:{data.get('url', 'unknown')}:{data.get('time', '')}"
-            self.redis_client.setex(key, 3600, json.dumps(data))  # TTL 1 hour
-
-            self.redis_client.hincrby(
-                "log:methods", data.get('method', 'unknown'), 1)
-            self.redis_client.hincrby("log:response_codes", str(
-                data.get('response_code', '0')), 1)
-
-            logging.debug(f"Stored in Redis: {key}")
+            
+            # Increment counter for sequence number (thread safe within the operator)
+            self.counter += 1
+            
+            # Extract access time and URL for the key
+            access_time = data.get('time', str(int(time.time())))
+            interface = data.get('url', 'unknown')
+            
+            # Create key using access time, interface and sequence number
+            key = f"log:{access_time}:{interface}:{self.counter}"
+            
+            self.redis_client.setex(key, 300, json.dumps(data))
+            
+            logging.debug(f"Stored in Redis: {key} with 5-minute TTL")
+            
+            yield value
         except Exception as e:
-            logging.error(f"Redis sink error: {e}")
+            logging.error(f"Redis process error: {e}")
 
 
 def kafka_sink_example():
@@ -100,10 +119,13 @@ def kafka_sink_example():
     """)
 
     data_stream = t_env.to_data_stream(table)
-
-    data_stream.add_sink(RedisSinkFunction())
-
-    data_stream.print()
+    
+    # print to debug
+    data_stream.print("Parsed Data")
+    
+    processed_stream = data_stream.process(RedisProcessFunction())
+    
+    processed_stream.print()
 
     env.execute("Kafka to Redis Job")
 

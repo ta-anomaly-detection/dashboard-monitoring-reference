@@ -75,6 +75,5 @@ volumes:
 
 networks:
   dashboard-reference-network:
-    name: dashboard-reference-network
-    driver: bridge
+    external: true
 

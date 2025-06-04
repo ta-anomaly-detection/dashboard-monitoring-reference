@@ -48,16 +48,16 @@ down-grafana:
 
 down-all:
 	@echo "Stopping all services..."
-	docker compose -f kafka/docker-compose.yml down -v
 	docker compose -f flink/docker-compose.yml down -v
 	docker compose -f redis/docker-compose.yml down -v
 	docker compose -f grafana/docker-compose.yml down -v
 	docker compose -f prometheus/docker-compose.yml down -v
 	docker compose -f web-server-reference/docker-compose.yml down -v
+	docker compose -f kafka/docker-compose.yml down -v
 
 logs:
-	docker compose -f web-server-reference/docker-compose.yml logs -f
 	docker compose -f kafka/docker-compose.yml logs -f
+	docker compose -f web-server-reference/docker-compose.yml logs -f
 	docker compose -f flink/docker-compose.yml logs -f
 	docker compose -f redis/docker-compose.yml logs -f
 	docker compose -f prometheus/docker-compose.yml logs -f

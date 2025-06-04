@@ -57,4 +57,5 @@ services:
 
 networks:
   dashboard-reference-network:
-    external: true
+    name: dashboard-reference-network
+    driver: bridge
