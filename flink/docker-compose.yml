@@ -1,7 +1,7 @@
 version: '3.7'
 services:
 
-  jobmanager:
+  jobmanager-reference:
     image: flink:1.18
     networks:
       - dashboard-reference-network
@@ -11,7 +11,7 @@ services:
       FLINK_PROPERTIES: "jobmanager.rpc.address: jobmanager"
     command: jobmanager
 
-  taskmanager:
+  taskmanager-reference:
     image: flink:1.18
     networks:
       - dashboard-reference-network
@@ -19,7 +19,7 @@ services:
       FLINK_PROPERTIES: "jobmanager.rpc.address: jobmanager"
     command: taskmanager
 
-  app:
+  app-reference:
     image: flink-app
     build:
       context: .
@@ -28,8 +28,8 @@ services:
       KAFKA_TOPIC: web-server-reference-logs
       SINK_DIR: /sink
     depends_on:
-      - jobmanager
-      - taskmanager
+      - jobmanager-reference
+      - taskmanager-reference
     volumes:
       - ./sink:/sink
       # - ./flink_with_python/app.py:/taskscripts/app.py

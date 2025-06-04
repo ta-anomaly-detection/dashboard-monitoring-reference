@@ -15,12 +15,6 @@ from pyflink.table.expressions import col
 from config import (
     KAFKA_BROKER,
     KAFKA_TOPIC,
-    CLICKHOUSE_HOST,
-    CLICKHOUSE_PORT,
-    CLICKHOUSE_DB,
-    CLICKHOUSE_TABLE,
-    CLICKHOUSE_USER,
-    CLICKHOUSE_PASSWORD,
     print_configuration
 )
 from udfs import (
@@ -40,7 +34,6 @@ def kafka_sink_example():
 
     env.add_jars("file:///jars/flink-sql-connector-kafka-3.0.1-1.18.jar")
     env.add_jars("file:///jars/flink-connector-jdbc-3.1.2-1.17.jar")
-    env.add_jars("file:///jars/clickhouse-jdbc-0.4.6-all.jar")
 
     print_configuration()
 
@@ -56,9 +49,8 @@ def kafka_sink_example():
         .set_value_only_deserializer(SimpleStringSchema()) \
         .build()
 
-    ds = env.from_source(kafka_source, watermark_strategy=None, source_name="Kafka Source")
+    ds = env.from_source(kafka_source, WatermarkStrategy.no_watermarks(), source_name="Kafka Source")
 
-    # Convert to table with one column: line
     t_env.create_temporary_view("raw_logs", t_env.from_data_stream(ds).alias("line"))
 
     table = t_env.sql_query("""

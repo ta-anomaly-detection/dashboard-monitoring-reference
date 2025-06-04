@@ -14,7 +14,7 @@ def parse_log(line: str):
             gd = match.groupdict()
             dt = datetime.strptime(gd['datetime'], '%d/%b/%Y:%H:%M:%S %z')
             url = gd['url']
-            # Split URL into path and query string
+
             if '?' in url:
                 path, param = url.split('?', 1)
             else:
