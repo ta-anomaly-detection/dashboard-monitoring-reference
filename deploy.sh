@@ -65,14 +65,22 @@ echo "Waiting for Redis to be ready..."
 wait_for_port "localhost" "6379"
 echo "Redis is ready!"
 
-### 5. Start Prometheus ###
+### 5. Start Doris ###
+echo "Starting Doris..."
+(cd doris && docker-compose up --build -d)
+
+echo "Waiting for Doris to be ready on port 8030..."
+wait_for_port "localhost" "8030"
+echo "Doris is ready!"
+
+### 6. Start Prometheus ###
 echo "Starting Prometheus..."
 (cd prometheus && docker-compose up --build -d)
 echo "Waiting for Prometheus to be ready on port 9090..."
 wait_for_port "localhost" "9090"
 echo "Prometheus is ready!"
 
-### 6. Start Grafana ###
+### 7. Start Grafana ###
 echo "Starting Grafana..."
 (cd grafana && docker-compose up --build -d)
 
@@ -92,5 +100,6 @@ echo "- Kafka Zookeeper:   http://localhost:2181"
 echo "- JMX Exporter:      http://localhost:7071"
 echo "- Flink Dashboard:   http://localhost:8081"
 echo "- Redis UI:          http://localhost:6379"
+echo "- Doris UI:          http://localhost:8030"
 echo "- Prometheus:        http://localhost:9090"
 echo "- Grafana Dashboard: http://localhost:3001"

@@ -4,12 +4,18 @@ services:
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
     ports:
       - "3001:3000"
     networks:
       - dashboard-reference-network
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./provisioning:/etc/grafana/provisioning
+      # - ./dashboards:/var/lib/grafana/dashboards
 
 volumes:
   grafana_data:

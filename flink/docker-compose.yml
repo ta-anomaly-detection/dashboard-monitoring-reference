@@ -29,6 +29,9 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_DB: 0
+      DORIS_JDBC_URL: jdbc:mysql://doris-fe:9030/web_monitoring?useUnicode=true&characterEncoding=utf8
+      DORIS_USERNAME: root
+      DORIS_PASSWORD: ""
       SINK_DIR: /sink
     depends_on:
       - jobmanager-reference

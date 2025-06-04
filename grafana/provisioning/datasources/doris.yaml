@@ -1,0 +1,15 @@
+apiVersion: 1
+
+datasources:
+  - name: Apache Doris
+    type: mysql
+    url: fe:9030
+    database: web_stats
+    user: root
+    secureJsonData:
+      password: ''
+    jsonData:
+      maxOpenConns: 100
+      maxIdleConns: 100
+      connMaxLifetime: 14400
+    editable: true
