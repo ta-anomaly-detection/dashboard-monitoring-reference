@@ -12,14 +12,7 @@ wait_for_port() {
   echo "${host}:${port} is ready!"
 }
 
-### 1. Start Web Server ###
-echo "Starting Web Server..."
-(cd web-server && docker-compose up --build -d)
-
-echo "Waiting for Web Server on port 3000..."
-wait_for_port "localhost" "3000"
-
-### 2. Start Kafka ###
+### 1. Start Kafka ###
 echo "Starting Kafka..."
 (cd kafka && docker-compose up --build -d)
 
@@ -27,13 +20,20 @@ echo "Waiting for Kafka to be ready on port 9092..."
 wait_for_port "localhost" "9092"
 
 echo "Creating Kafka topics..."
-docker exec kafka-server kafka-topics --create \
-  --topic web-server-logs \
+docker exec kafka-server-reference kafka-topics --create \
+  --topic nginx-logs \
   --bootstrap-server localhost:9092 \
   --replication-factor 1 \
-  --partitions 10 || echo "Topic web-server-logs might already exist or an error occurred."
+  --partitions 10 || echo "Topic nginx-logs might already exist or an error occurred."
 
 echo "Kafka cluster is ready."
+
+### 2. Start Web Server Reference ###
+echo "Starting Web Server Reference..."
+(cd web-server-reference && docker-compose up --build -d)
+
+echo "Waiting for Web Server Reference on port 3000..."
+wait_for_port "localhost" "3000"
 
 ### 3. Start Flink ###
 echo "Starting Flink Consumer..."
@@ -57,30 +57,13 @@ wait_for_port "localhost" "8081"
 #   echo "Please check the Flink dashboard at http://localhost:8081 for job status."
 # fi
 
-### 4. Start ClickHouse ###
-echo "Starting ClickHouse..."
-(cd clickhouse && docker-compose up --build -d)
+### 4. Start Redis ###
+echo "Starting Redis..."
+(cd redis && docker-compose up --build -d)
 
-echo "Waiting for ClickHouse to be ready..."
-until docker exec clickhouse clickhouse-client --query "SELECT 1" >/dev/null 2>&1; do
-  echo "ClickHouse not ready, waiting..."
-  sleep 2
-done
-echo "ClickHouse is ready!"
-
-echo "Running ClickHouse migrations..."
-MIGRATION_DIR="/migrations"
-for file in $(docker exec clickhouse sh -c "ls $MIGRATION_DIR/*.sql"); do
-  if [ -n "$file" ]; then
-    echo "Applying migration: $file"
-    docker exec clickhouse sh -c "clickhouse-client --query \"$(docker exec clickhouse cat $file)\""
-    if [ $? -ne 0 ]; then
-      echo "Error applying migration $file"
-      exit 1
-    fi
-  fi
-done
-echo "All migrations applied successfully."
+echo "Waiting for Redis to be ready..."
+wait_for_port "localhost" "6379"
+echo "Redis is ready!"
 
 ### 5. Start Prometheus ###
 echo "Starting Prometheus..."
@@ -108,5 +91,6 @@ echo "- Kafka UI:          http://localhost:8080"
 echo "- Kafka Zookeeper:   http://localhost:2181"
 echo "- JMX Exporter:      http://localhost:7071"
 echo "- Flink Dashboard:   http://localhost:8081"
-echo "- ClickHouse Client: http://localhost:8123"
+echo "- Redis UI:         http://localhost:6379"
+echo "- Prometheus:        http://localhost:9090"
 echo "- Grafana Dashboard: http://localhost:3001"

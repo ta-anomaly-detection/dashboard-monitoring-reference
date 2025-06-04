@@ -1,0 +1,6 @@
+# Redis dump files
+*.rdb
+*.aof
+
+# Local development files
+.env

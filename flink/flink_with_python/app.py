@@ -1,6 +1,6 @@
-import requests
 import json
 import logging
+import redis
 
 from pyflink.common import WatermarkStrategy, Row
 from pyflink.common.serialization import SimpleStringSchema
@@ -8,13 +8,16 @@ from pyflink.common.typeinfo import Types
 from pyflink.datastream import StreamExecutionEnvironment
 from pyflink.datastream.connectors.kafka import KafkaOffsetsInitializer, KafkaSource
 from pyflink.datastream.connectors.jdbc import JdbcSink, JdbcConnectionOptions, JdbcExecutionOptions
-from pyflink.datastream.functions import MapFunction
+from pyflink.datastream.functions import MapFunction, SinkFunction
 from pyflink.table import StreamTableEnvironment
 from pyflink.table.expressions import col
 
 from config import (
     KAFKA_BROKER,
     KAFKA_TOPIC,
+    REDIS_HOST,
+    REDIS_PORT,
+    REDIS_DB,
     print_configuration
 )
 from udfs import (
@@ -28,6 +31,29 @@ logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s [%(levelname)s] %(name)s - %(message)s"
 )
+
+
+class RedisSinkFunction(SinkFunction):
+    def __init__(self):
+        self.redis_client = redis.Redis(
+            host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB)
+
+    def invoke(self, value, context=None):
+        try:
+            data = {k: v for k, v in zip(value._fields, value)}
+
+            key = f"log:{data.get('url', 'unknown')}:{data.get('time', '')}"
+            self.redis_client.setex(key, 3600, json.dumps(data))  # TTL 1 hour
+
+            self.redis_client.hincrby(
+                "log:methods", data.get('method', 'unknown'), 1)
+            self.redis_client.hincrby("log:response_codes", str(
+                data.get('response_code', '0')), 1)
+
+            logging.debug(f"Stored in Redis: {key}")
+        except Exception as e:
+            logging.error(f"Redis sink error: {e}")
+
 
 def kafka_sink_example():
     env = StreamExecutionEnvironment.get_execution_environment()
@@ -49,9 +75,11 @@ def kafka_sink_example():
         .set_value_only_deserializer(SimpleStringSchema()) \
         .build()
 
-    ds = env.from_source(kafka_source, WatermarkStrategy.no_watermarks(), source_name="Kafka Source")
+    ds = env.from_source(
+        kafka_source, WatermarkStrategy.no_watermarks(), source_name="Kafka Source")
 
-    t_env.create_temporary_view("raw_logs", t_env.from_data_stream(ds).alias("line"))
+    t_env.create_temporary_view(
+        "raw_logs", t_env.from_data_stream(ds).alias("line"))
 
     table = t_env.sql_query("""
         SELECT 
@@ -70,10 +98,14 @@ def kafka_sink_example():
             FROM raw_logs
         )
     """)
-    
-    t_env.to_data_stream(table).print()
 
-    env.execute("Kafka to ClickHouse JDBC Job")
+    data_stream = t_env.to_data_stream(table)
+
+    data_stream.add_sink(RedisSinkFunction())
+
+    data_stream.print()
+
+    env.execute("Kafka to Redis Job")
 
 
 if __name__ == "__main__":
