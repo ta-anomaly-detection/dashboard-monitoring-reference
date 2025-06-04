@@ -55,16 +55,16 @@ def kafka_sink_example():
 
     table = t_env.sql_query("""
         SELECT 
-            parsed['ip'] AS ip,
-            parsed['time'] AS time,
-            parsed['method'] AS method,
-            parsed['url'] AS url,
-            parsed['param'] AS param,
-            parsed['protocol'] AS protocol,
-            parsed['responseTime'] AS response_time,
-            parsed['responseCode'] AS response_code,
-            parsed['responseByte'] AS response_byte,
-            parsed['user-agent'] AS user_agent
+            parsed['ip'] AS `ip`,
+            parsed['time'] AS `time`,
+            parsed['method'] AS `method`,
+            parsed['url'] AS `url`,
+            parsed['param'] AS `param`,
+            parsed['protocol'] AS `protocol`,
+            parsed['responseTime'] AS `response_time`,
+            parsed['responseCode'] AS `response_code`,
+            parsed['responseByte'] AS `response_byte`,
+            parsed['user-agent'] AS `user_agent`
         FROM (
             SELECT parse_log(line) AS parsed
             FROM raw_logs

@@ -5,9 +5,8 @@ from pyflink.table.udf import udf
 @udf(result_type='MAP<STRING, STRING>')
 def parse_log(line: str):
     try:
-        # Regex to extract log components
         pattern = re.compile(
-            r'(?P<ip>\S+) - - \[(?P<datetime>[^\]]+)\] time:(?P<response_time>[\d.]+) s"(?P<method>[A-Z]+) (?P<url>\S+) (?P<protocol>[^"]+)" (?P<status>\d{3}) (?P<size>\d+) "[^"]*" "(?P<user_agent>[^"]+)"'
+            r'(?P<ip>\S+) - - \[(?P<datetime>[^\]]+)\] time:(?P<response_time>[\d.]+) s "(?P<method>[A-Z]+) (?P<url>\S+) (?P<protocol>[^"]+)" (?P<status>\d{3}) (?P<size>\d+) "[^"]*" "(?P<user_agent>[^"]+)"'
         )
         match = pattern.match(line)
         if match:
@@ -18,7 +17,7 @@ def parse_log(line: str):
             if '?' in url:
                 path, param = url.split('?', 1)
             else:
-                path, param = url, ''
+                path, param = url, '-'
 
             return {
                 'ip': gd['ip'],
