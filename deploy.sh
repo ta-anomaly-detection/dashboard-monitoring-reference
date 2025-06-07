@@ -69,24 +69,52 @@ echo "Redis is ready!"
 echo "Starting Doris..."
 (cd doris && docker-compose up --build -d)
 
-echo "Waiting for Doris to be ready..."
+echo "Waiting for Doris FE to be ready..."
 wait_for_port "localhost" "8030"
-wait_for_port "localhost" "9030"
-echo "Doris is ready!"
+echo "Doris FE is ready!"
 
-# echo "Migrating Doris tables..."
-# MIGRATION_DIR="/migrations"
-# for file in $(docker exec doris-fe-1 /bin/sh -c "ls $MIGRATION_DIR/*.sql"); do
-#   if [ -n "$file" ]; then
-#     echo "Applying migration: $file"
-#     docker exec doris-fe-1 /bin/sh -c "mysql -h fe -P 9030 -uroot < $file"
-#     if [ $? -ne 0 ]; then
-#       echo "Error applying migration $file"
-#       exit 1
-#     fi
-#   fi
-# done
-# echo "Doris tables migrated successfully!"
+echo "Waiting for Doris FE to initialize..."
+while ! docker exec doris-fe-1 /bin/sh -c "mysql -h fe -P 9030 -uroot -e 'SELECT 1'" &>/dev/null; do
+  echo "Doris FE not fully initialized, waiting..."
+  sleep 5
+done
+echo "Doris FE fully initialized!"
+
+echo "Waiting for Doris BE to register with FE..."
+MAX_RETRIES=30
+count=0
+while true; do
+  BE_STATUS=$(docker exec doris-fe-1 /bin/sh -c "mysql -h fe -P 9030 -uroot -e 'SELECT alive from backends()'" 2>/dev/null | grep -E "1" || true)
+  if [ -n "$BE_STATUS" ]; then
+    echo "✅ Doris BE successfully registered with FE and is alive!"
+    break
+  fi
+  
+  count=$((count+1))
+  if [ $count -ge $MAX_RETRIES ]; then
+    echo "❌ Timed out waiting for Doris BE to register. Please check BE logs for issues."
+    echo "Current BE status:"
+    docker exec doris-fe-1 /bin/sh -c "mysql -h fe -P 9030 -uroot -e 'SELECT * from backends()'" || echo "Could not query backends"
+    exit 1
+  fi
+  
+  echo "Waiting for BE registration with FE (attempt $count/$MAX_RETRIES)..."
+  sleep 5
+done
+
+echo "Migrating Doris tables..."
+MIGRATION_DIR="/migrations"
+for file in $(docker exec doris-fe-1 /bin/sh -c "ls $MIGRATION_DIR/*.sql"); do
+  if [ -n "$file" ]; then
+    echo "Applying migration: $file"
+    docker exec doris-fe-1 /bin/sh -c "mysql -h fe -P 9030 -uroot < $file"
+    if [ $? -ne 0 ]; then
+      echo "Error applying migration $file"
+      exit 1
+    fi
+  fi
+done
+echo "Doris tables migrated successfully!"
 
 ### 6. Start Prometheus ###
 echo "Starting Prometheus..."

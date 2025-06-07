@@ -171,7 +171,6 @@ def kafka_sink_example():
         output_type=doris_row_type
     )
     
-    # Add the sink
     doris_stream.add_sink(doris_sink).name("Doris JDBC Sink")
 
     env.execute("Web Log Statistics Job")
