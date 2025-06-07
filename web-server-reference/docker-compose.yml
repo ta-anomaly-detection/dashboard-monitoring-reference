@@ -18,7 +18,8 @@ services:
       - "3000:3000"
     restart: unless-stopped
     networks:
-      - dashboard-reference-network
+      dashboard-reference-network:
+        ipv4_address: 172.20.80.10
 
   web-server-reference-db:
     image: postgres:15
@@ -33,7 +34,8 @@ services:
       - "5432:5432"
     restart: unless-stopped
     networks:
-      - dashboard-reference-network
+      dashboard-reference-network:
+        ipv4_address: 172.20.80.11
 
   nginx:
     image: nginx:latest
@@ -47,7 +49,8 @@ services:
       - app-data:/var/log/nginx 
     restart: unless-stopped
     networks:
-      - dashboard-reference-network
+      dashboard-reference-network:
+        ipv4_address: 172.20.80.12
   
   flume:
     build:
@@ -62,12 +65,8 @@ services:
     environment:
       - FLUME_JAVA_OPTS=-Xms512m -Xmx1024m
     networks:
-      - dashboard-reference-network
-    healthcheck:
-      test: ["CMD", "netstat", "-tupln"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      dashboard-reference-network:
+        ipv4_address: 172.20.80.13
 
 volumes:
   app-data: {}

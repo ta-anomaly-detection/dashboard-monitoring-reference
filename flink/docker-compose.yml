@@ -4,7 +4,8 @@ services:
   jobmanager-reference:
     image: flink:1.18
     networks:
-      - dashboard-reference-network
+      dashboard-reference-network:
+        ipv4_address: 172.20.80.60
     ports:
       - 8081:8081
     environment:
@@ -14,7 +15,8 @@ services:
   taskmanager-reference:
     image: flink:1.18
     networks:
-      - dashboard-reference-network
+      dashboard-reference-network:
+        ipv4_address: 172.20.80.61
     environment:
       FLINK_PROPERTIES: "jobmanager.rpc.address: jobmanager-reference"
     command: taskmanager
@@ -29,8 +31,8 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_DB: 0
-      DORIS_JDBC_URL: jdbc:mysql://doris-fe:9030/web_monitoring?useUnicode=true&characterEncoding=utf8
-      DORIS_USERNAME: root
+      DORIS_JDBC_URL: jdbc:mysql://172.20.80.2:9030/web_monitoring
+      DORIS_USERNAME: admin
       DORIS_PASSWORD: ""
       SINK_DIR: /sink
     depends_on:
@@ -45,7 +47,8 @@ services:
       - -f
       - /dev/null
     networks:
-      - dashboard-reference-network
+      dashboard-reference-network:
+        ipv4_address: 172.20.80.62
 
 networks:
   dashboard-reference-network:

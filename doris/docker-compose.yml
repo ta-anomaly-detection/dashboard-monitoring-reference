@@ -5,7 +5,7 @@ networks:
 
 services:
   fe:
-    image: apache/doris:fe-3.0.4
+    image: apache/doris:fe-3.0.5
     hostname: fe
     ports:
       - 8030:8030
@@ -14,11 +14,16 @@ services:
     environment:
       - FE_SERVERS=fe1:172.20.80.2:9010
       - FE_ID=1
+    volumes:
+      - ./migrations:/migrations
+      - doris-fe-meta:/opt/apache-doris/fe/doris-meta
+      - doris-fe-log:/opt/apache-doris/fe/log
     networks:
-      - dashboard-reference-network
+      dashboard-reference-network:
+        ipv4_address: 172.20.80.2
 
   be:
-    image: apache/doris:be-3.0.4
+    image: apache/doris:be-3.0.5
     hostname: be
     ports:
       - 8040:8040
@@ -28,5 +33,17 @@ services:
       - BE_ADDR=172.20.80.3:9050
     depends_on:
       - fe
+    volumes:
+      - ./migrations:/migrations
+      - ./migrations/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql:ro
+      - doris-be-storage:/opt/apache-doris/be/storage
+      - doris-be-log:/opt/apache-doris/be/log
     networks:
-      - dashboard-reference-network
+      dashboard-reference-network:
+        ipv4_address: 172.20.80.3
+
+volumes:
+  doris-fe-meta:
+  doris-fe-log:
+  doris-be-storage:
+  doris-be-log:

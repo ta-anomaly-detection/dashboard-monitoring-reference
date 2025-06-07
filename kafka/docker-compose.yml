@@ -10,7 +10,8 @@ services:
     ports:
       - "2181:2181"
     networks:
-      - dashboard-reference-network
+      dashboard-reference-network:
+        ipv4_address: 172.20.80.50
 
   kafka:
     image: confluentinc/cp-kafka:7.6.0
@@ -39,7 +40,8 @@ services:
     volumes:
       - ./jmx_exporter:/jmx_exporter
     networks:
-      - dashboard-reference-network
+      dashboard-reference-network:
+        ipv4_address: 172.20.80.51
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
@@ -53,9 +55,14 @@ services:
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka-server-reference:9092
       KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
     networks:
-      - dashboard-reference-network
+      dashboard-reference-network:
+        ipv4_address: 172.20.80.52
 
 networks:
   dashboard-reference-network:
     name: dashboard-reference-network
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.80.0/24
+

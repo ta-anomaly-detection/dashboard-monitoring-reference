@@ -69,9 +69,24 @@ echo "Redis is ready!"
 echo "Starting Doris..."
 (cd doris && docker-compose up --build -d)
 
-echo "Waiting for Doris to be ready on port 8030..."
+echo "Waiting for Doris to be ready..."
 wait_for_port "localhost" "8030"
+wait_for_port "localhost" "9030"
 echo "Doris is ready!"
+
+# echo "Migrating Doris tables..."
+# MIGRATION_DIR="/migrations"
+# for file in $(docker exec doris-fe-1 /bin/sh -c "ls $MIGRATION_DIR/*.sql"); do
+#   if [ -n "$file" ]; then
+#     echo "Applying migration: $file"
+#     docker exec doris-fe-1 /bin/sh -c "mysql -h fe -P 9030 -uroot < $file"
+#     if [ $? -ne 0 ]; then
+#       echo "Error applying migration $file"
+#       exit 1
+#     fi
+#   fi
+# done
+# echo "Doris tables migrated successfully!"
 
 ### 6. Start Prometheus ###
 echo "Starting Prometheus..."

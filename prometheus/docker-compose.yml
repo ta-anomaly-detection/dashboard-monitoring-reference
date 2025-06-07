@@ -6,7 +6,8 @@ services:
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
     networks:
-      - dashboard-reference-network
+      dashboard-reference-network:
+        ipv4_address: 172.20.80.20
     ports:
       - "9090:9090"
 
