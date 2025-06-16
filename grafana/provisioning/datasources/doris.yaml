@@ -4,7 +4,7 @@ datasources:
   - name: Apache Doris
     type: mysql
     url: fe:9030
-    database: web_stats
+    database: web_monitoring
     user: root
     secureJsonData:
       password: ''

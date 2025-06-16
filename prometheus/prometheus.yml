@@ -2,3 +2,34 @@ scrape_configs:
   - job_name: 'kafka'
     static_configs:
       - targets: ['kafka-server-reference:7071']
+
+  - job_name: 'flume'
+    static_configs:
+      - targets: ['flume-agent:7072']
+    scrape_interval: 15s
+
+  - job_name: 'flink'
+    static_configs:
+      - targets: ['flink-jobmanager-reference-1:9249', 'flink-taskmanager-reference-1:9249']
+    scrape_interval: 15s
+
+  - job_name: 'doris'
+    static_configs:
+      - targets: ['doris-fe-1:8030', 'doris-be-1:8040']
+    scrape_interval: 15s
+    metrics_path: /metrics
+
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 15s
+
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 30s
+
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 15s

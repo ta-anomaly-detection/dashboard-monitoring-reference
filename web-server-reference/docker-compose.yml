@@ -30,6 +30,8 @@ services:
       POSTGRES_DB: ${DB_NAME}
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./db/migrations:/migrations
+      - ./run-migrations.sh:/docker-entrypoint-initdb.d/01_run_migrations.sh
     ports:
       - "5432:5432"
     restart: unless-stopped
@@ -62,11 +64,29 @@ services:
     volumes:
       - ./flume/flume.conf:/flume/conf/flume.conf:ro
       - app-data:/var/log/nginx:ro 
+      # - ./flume/jmx_exporter/jmx_exporter.yaml:/opt/flume/conf/jmx-exporter-config.yml
+      # - ./flume/jmx_exporter/jmx_prometheus_javaagent-1.2.0.jar:/opt/flume/lib/jmx_prometheus_javaagent.jar
     environment:
       - FLUME_JAVA_OPTS=-Xms512m -Xmx1024m
+      # - JAVA_TOOL_OPTIONS=-javaagent:/opt/flume/lib/jmx_prometheus_javaagent.jar=7071:/opt/flume/conf/jmx-exporter-config.yml
     networks:
       dashboard-reference-network:
         ipv4_address: 172.20.80.13
+
+  # flume-exporter:
+  #   build:
+  #     context: ./flume-exporter
+  #     dockerfile: Dockerfile
+  #   container_name: flume-exporter
+  #   depends_on:
+  #     - flume
+  #   environment:
+  #     - FLUME_EXPORTER_PORT=8080
+  #   ports:
+  #     - "8080:8080"
+  #   networks:
+  #     dashboard-reference-network:
+  #       ipv4_address:
 
 volumes:
   app-data: {}

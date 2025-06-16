@@ -35,6 +35,30 @@ echo "Starting Web Server Reference..."
 echo "Waiting for Web Server Reference on port 3000..."
 wait_for_port "localhost" "3000"
 
+echo "Waiting for Web DB on port 5432..."
+wait_for_port "localhost" "5432"
+echo "Running Web DB migrations..."
+
+docker exec web-server-reference-db sh -c '
+  echo "🚀 Running migrations from /migrations/*.up.sql"
+  for f in /migrations/*.up.sql; do
+    if [ -f "$f" ]; then
+      echo "🔹 Running migration: $f"
+      psql -U postgres -d web_server_reference -f "$f"
+      if [ $? -ne 0 ]; then
+        echo "❌ Error running migration: $f"
+        exit 1
+      fi
+    fi
+  done
+  echo "✅ All migrations executed successfully."
+'
+if [ $? -ne 0 ]; then
+  echo "Error running migrations on Web DB"
+  exit 1
+fi
+echo "Web DB migrations completed successfully."
+
 ### 3. Start Flink ###
 echo "Starting Flink Consumer..."
 (cd flink && docker-compose up --build -d)
@@ -58,12 +82,12 @@ wait_for_port "localhost" "8081"
 # fi
 
 ### 4. Start Redis ###
-echo "Starting Redis..."
-(cd redis && docker-compose up --build -d)
+# echo "Starting Redis..."
+# (cd redis && docker-compose up --build -d)
 
-echo "Waiting for Redis to be ready..."
-wait_for_port "localhost" "6379"
-echo "Redis is ready!"
+# echo "Waiting for Redis to be ready..."
+# wait_for_port "localhost" "6379"
+# echo "Redis is ready!"
 
 ### 5. Start Doris ###
 echo "Starting Doris..."
@@ -142,7 +166,6 @@ echo "- Kafka UI:          http://localhost:8080"
 echo "- Kafka Zookeeper:   http://localhost:2181"
 echo "- JMX Exporter:      http://localhost:7071"
 echo "- Flink Dashboard:   http://localhost:8081"
-echo "- Redis UI:          http://localhost:6379"
 echo "- Doris UI:          http://localhost:8030"
 echo "- Prometheus:        http://localhost:9090"
 echo "- Grafana Dashboard: http://localhost:3001"

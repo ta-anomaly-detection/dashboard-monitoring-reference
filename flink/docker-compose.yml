@@ -9,7 +9,12 @@ services:
     ports:
       - 8081:8081
     environment:
-      FLINK_PROPERTIES: "jobmanager.rpc.address: jobmanager-reference"
+    - |
+      FLINK_PROPERTIES=
+      jobmanager.rpc.addres: jobmanager-reference
+      metrics.reporters: prom
+      metrics.reporter.prom.factory.class: org.apache.flink.metrics.prometheus.PrometheusReporterFactory
+      metrics.reporter.prom.port: 9249
     command: jobmanager
 
   taskmanager-reference:
@@ -18,7 +23,12 @@ services:
       dashboard-reference-network:
         ipv4_address: 172.20.80.61
     environment:
-      FLINK_PROPERTIES: "jobmanager.rpc.address: jobmanager-reference"
+    - |
+      FLINK_PROPERTIES=
+      jobmanager.rpc.addres: jobmanager-reference
+      metrics.reporters: prom
+      metrics.reporter.prom.factory.class: org.apache.flink.metrics.prometheus.PrometheusReporterFactory
+      metrics.reporter.prom.port: 9249
     command: taskmanager
 
   app-reference:

@@ -46,4 +46,5 @@ COPY config.yaml .
 COPY db/migrations ./db/migrations
 
 # Command to run the executable
-CMD ./web-server migrate up && ./web-server serve
+# CMD ./web-server migrate up && ./web-server serve
+CMD ./web-server serve

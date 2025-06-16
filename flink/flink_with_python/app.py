@@ -1,8 +1,4 @@
-import json
 import logging
-import redis
-import time
-import uuid
 
 from pyflink.common import WatermarkStrategy, Row
 from pyflink.common.serialization import SimpleStringSchema
@@ -16,9 +12,6 @@ from pyflink.table import StreamTableEnvironment
 from config import (
     KAFKA_BROKER,
     KAFKA_TOPIC,
-    REDIS_HOST,
-    REDIS_PORT,
-    REDIS_DB,
     DORIS_JDBC_URL,
     DORIS_USERNAME,
     DORIS_PASSWORD,
@@ -27,17 +20,6 @@ from config import (
 from udfs import (
     register_udfs,
     parse_log
-)
-
-from redis_functions import RedisProcessFunction
-from doris_sink import (
-    get_doris_row_type,
-    create_doris_row_mapper,
-    setup_doris_sink
-)
-from aggregation_functions import (
-    OneSecondWindowFunction,
-    OneMinuteAggregateFunction
 )
 
 from utils import clean_ts
@@ -88,7 +70,7 @@ def kafka_sink_example():
             parsed['responseTime'] AS `response_time`,
             parsed['responseCode'] AS `response_code`,
             parsed['responseByte'] AS `response_byte`,
-            parsed['user-agent'] AS `user_agent`
+            parsed['userAgent'] AS `user_agent`
         FROM (
             SELECT parse_log(line) AS parsed
             FROM raw_logs
@@ -97,36 +79,18 @@ def kafka_sink_example():
 
     data_stream = t_env.to_data_stream(table)
     
-    # Store raw data in Redis for individual log access
-    redis_stream = data_stream.process(RedisProcessFunction())
-    
-    redis_stream.print("Raw Data Stream")
-    
-    # Add a map to make sure time format is correct before processing
-    validated_stream = redis_stream.map(lambda x: x)
-    validated_stream.print("Validated Stream")
-    
-    # Process 1-second windows
-    one_second_stream = validated_stream.key_by(
-        lambda x: getattr(x, 'time', 'unknown')
-    ).process(OneSecondWindowFunction())
-    
-    one_second_stream.print("1-Second Processed Data")
-    
-    # Process 1-minute windows
-    one_minute_stream = one_second_stream.key_by(
-        lambda x: getattr(x, 'time', 'unknown')
-    ).process(OneMinuteAggregateFunction())
-    
-    # Debug output
-    one_minute_stream.print("1-Minute Aggregated Data")
+    # debug
+    # data_stream.print("Data Stream Output")
     
     # Define the doris_row_type only once
     doris_row_type = Types.ROW_NAMED(
-        ['timestamp', 'request_count', 'avg_response_time', 'min_response_time', 
-         'max_response_time', 'band_1_5s', 'band_5_10s', 'band_10s_plus'],
-        [Types.STRING(), Types.INT(), Types.FLOAT(), Types.FLOAT(), 
-         Types.FLOAT(), Types.INT(), Types.INT(), Types.INT()]
+        ['ip', 'time', 'method', 'url', 'param',
+         'protocol', 'response_time', 'response_code', 
+         'response_byte', 'user_agent'],
+        [Types.STRING(), Types.STRING(), Types.STRING(),
+         Types.STRING(), Types.STRING(),
+         Types.STRING(), Types.FLOAT(), Types.INT(),
+         Types.INT(), Types.STRING()]
     )
 
     # Setup JDBC connection options
@@ -146,10 +110,9 @@ def kafka_sink_example():
     # Create a proper Row-based sink that JDBC connector can handle
     doris_sink = JdbcSink.sink(
         """
-        INSERT INTO web_log_stats_1m 
-        (timestamp, request_count, avg_response_time, min_response_time, max_response_time, 
-        band_1_5s, band_5_10s, band_10s_plus)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO web_server_logs 
+        (ip, time, method, url, param, protocol, response_time, response_code, response_byte, user_agent)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         type_info=doris_row_type,
         jdbc_execution_options=execution_options,
@@ -157,35 +120,27 @@ def kafka_sink_example():
     )
     
     # Create ONLY ONE doris_stream with properly typed output
-    doris_stream = one_minute_stream.map(
-        lambda x: Row(
-            timestamp=clean_ts(x.time),
-            request_count=1,
-            avg_response_time=float(x.response_time) if x.response_time else 0.0,
-            min_response_time=float(x.response_time) if x.response_time else 0.0,
-            max_response_time=float(x.response_time) if x.response_time else 0.0,
-            band_1_5s=0,
-            band_5_10s=0,
-            band_10s_plus=0
+    doris_stream = data_stream.map(
+        lambda row: Row(
+            row.ip,
+            clean_ts(row.time), 
+            row.method,
+            row.url,
+            row.param,
+            row.protocol,
+            float(row.response_time) if row.response_time else 0.0,  # Handle nulls
+            int(row.response_code) if row.response_code else 0,  # Handle nulls
+            int(row.response_byte) if row.response_byte else 0,  # Handle nulls
+            row.user_agent
         ),
         output_type=doris_row_type
     )
     
-    doris_stream.add_sink(doris_sink).name("Doris JDBC Sink")
+    doris_stream.add_sink(doris_sink)
+    
+    doris_stream.print("Doris Sink Output")
 
     env.execute("Web Log Statistics Job")
-
-def setup_doris_statement(stmt, row):
-    """Helper function to set parameters in JDBC statement"""
-    stmt.setString(1, row.timestamp)  # Convert to proper format if needed
-    stmt.setInt(2, row.request_count)
-    stmt.setFloat(3, row.avg_response_time)
-    stmt.setFloat(4, row.min_response_time)
-    stmt.setFloat(5, row.max_response_time)
-    stmt.setInt(6, row.band_1_5s)
-    stmt.setInt(7, row.band_5_10s)
-    stmt.setInt(8, row.band_10s_plus)
-    return stmt
 
 if __name__ == "__main__":
     kafka_sink_example()

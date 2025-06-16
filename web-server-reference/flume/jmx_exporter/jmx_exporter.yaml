@@ -1,0 +1,43 @@
+startDelaySeconds: 0
+lowercaseOutputName: true
+lowercaseOutputLabelNames: true
+rules:
+  # Flume Channel metrics
+  - pattern: "org.apache.flume.channel<type=(.+), name=(.+)><>(.+): (.+)"
+    name: flume_channel_$3
+    labels:
+      type: "$1"
+      name: "$2"
+    value: "$4"
+    type: GAUGE
+
+  # Flume Source metrics
+  - pattern: "org.apache.flume.source<type=(.+), name=(.+)><>(.+): (.+)"
+    name: flume_source_$3
+    labels:
+      type: "$1"
+      name: "$2"
+    value: "$4"
+    type: GAUGE
+
+  # Flume Sink metrics
+  - pattern: "org.apache.flume.sink<type=(.+), name=(.+)><>(.+): (.+)"
+    name: flume_sink_$3
+    labels:
+      type: "$1"
+      name: "$2"
+    value: "$4"
+    type: GAUGE
+
+  # JVM metrics
+  - pattern: "java.lang<type=Memory><HeapMemoryUsage>(.+): (.+)"
+    name: jvm_memory_heap_$1
+    value: "$2"
+    type: GAUGE
+
+  - pattern: "java.lang<type=GarbageCollector, name=(.+)><>(.+): (.+)"
+    name: jvm_gc_$2
+    labels:
+      name: "$1"
+    value: "$3"
+    type: GAUGE
