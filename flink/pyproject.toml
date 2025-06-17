@@ -14,7 +14,6 @@ black = "^23.11.0"
 asyncio = "^3.4.3"
 apache-flink = "^1.18.0"
 python-dotenv = "^1.0.0"
-redis = "^6.2.0"
 
 [build-system]
 requires = ["poetry-core"]

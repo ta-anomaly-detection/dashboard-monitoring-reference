@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS web_server_logs
     `param` TEXT COMMENT "request parameters",
     `protocol` VARCHAR(10) NOT NULL COMMENT "HTTP protocol version",
     `response_code` INT NOT NULL COMMENT "HTTP response code",
-    `response_bytes` INT NOT NULL COMMENT "response size in bytes",
+    `response_byte` INT NOT NULL COMMENT "response size in bytes",
     `user_agent` VARCHAR(255) COMMENT "user agent string",
     `ingestion_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT "time when the log was ingested"
 )
