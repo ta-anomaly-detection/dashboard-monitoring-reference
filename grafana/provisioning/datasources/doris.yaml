@@ -6,6 +6,7 @@ datasources:
     url: fe:9030
     database: web_monitoring
     user: root
+    updateIntervalSeconds: 2
     secureJsonData:
       password: ''
     jsonData:

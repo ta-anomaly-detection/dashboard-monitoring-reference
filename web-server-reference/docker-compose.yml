@@ -22,7 +22,7 @@ services:
         ipv4_address: 172.20.80.10
 
   web-server-reference-db:
-    image: postgres:15
+    image: postgres:17
     container_name: web-server-reference-db
     environment:
       POSTGRES_USER: ${DB_USER}

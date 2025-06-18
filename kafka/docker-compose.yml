@@ -43,21 +43,6 @@ services:
       dashboard-reference-network:
         ipv4_address: 172.20.80.51
 
-  kafka-ui:
-    image: provectuslabs/kafka-ui:latest
-    container_name: kafka-ui-reference
-    depends_on:
-      - kafka
-    ports:
-      - "8080:8080"
-    environment:
-      KAFKA_CLUSTERS_0_NAME: local
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka-server-reference:9092
-      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
-    networks:
-      dashboard-reference-network:
-        ipv4_address: 172.20.80.52
-
 networks:
   dashboard-reference-network:
     name: dashboard-reference-network
