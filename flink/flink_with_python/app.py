@@ -1,4 +1,6 @@
 import logging
+import time
+from datetime import datetime
 
 from pyflink.common import WatermarkStrategy, Row
 from pyflink.common.serialization import SimpleStringSchema
@@ -28,6 +30,27 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s - %(message)s"
 )
+
+def process_row_with_timing(row):
+    """Process a row and measure the processing time in milliseconds"""
+    start_time = time.time() * 1000  # Convert to milliseconds
+    
+    # Process the row data
+    processed_row = Row(
+        row.ip,
+        clean_ts(row.time), 
+        row.method,
+        row.url,
+        row.param,
+        row.protocol,
+        float(row.response_time) if row.response_time else 0.0,  # Handle nulls
+        int(row.response_code) if row.response_code else 0,  # Handle nulls
+        int(row.response_byte) if row.response_byte else 0,  # Handle nulls
+        row.user_agent,
+        time.time() * 1000 - start_time  # Calculate processing time in milliseconds
+    )
+    
+    return processed_row
 
 def kafka_sink_example():
     env = StreamExecutionEnvironment.get_execution_environment()
@@ -86,11 +109,11 @@ def kafka_sink_example():
     doris_row_type = Types.ROW_NAMED(
         ['ip', 'time', 'method', 'url', 'param',
          'protocol', 'response_time', 'response_code', 
-         'response_byte', 'user_agent'],
+         'response_byte', 'user_agent', 'flink_processing_time_ms'],
         [Types.STRING(), Types.STRING(), Types.STRING(),
          Types.STRING(), Types.STRING(),
          Types.STRING(), Types.FLOAT(), Types.INT(),
-         Types.INT(), Types.STRING()]
+         Types.INT(), Types.STRING(), Types.FLOAT()]
     )
 
     # Setup JDBC connection options
@@ -111,28 +134,17 @@ def kafka_sink_example():
     doris_sink = JdbcSink.sink(
         """
         INSERT INTO web_server_logs 
-        (ip, time, method, url, param, protocol, response_time, response_code, response_byte, user_agent)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (ip, time, method, url, param, protocol, response_time, response_code, response_byte, user_agent, flink_processing_time_ms)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         type_info=doris_row_type,
         jdbc_execution_options=execution_options,
         jdbc_connection_options=jdbc_options
     )
     
-    # Create ONLY ONE doris_stream with properly typed output
+    # Create ONLY ONE doris_stream with properly typed output and processing time measurement
     doris_stream = data_stream.map(
-        lambda row: Row(
-            row.ip,
-            clean_ts(row.time), 
-            row.method,
-            row.url,
-            row.param,
-            row.protocol,
-            float(row.response_time) if row.response_time else 0.0,  # Handle nulls
-            int(row.response_code) if row.response_code else 0,  # Handle nulls
-            int(row.response_byte) if row.response_byte else 0,  # Handle nulls
-            row.user_agent
-        ),
+        process_row_with_timing,
         output_type=doris_row_type
     )
     
