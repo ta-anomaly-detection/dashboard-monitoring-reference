@@ -1,10 +1,12 @@
 from datetime import datetime
+import time
 import re
 from pyflink.table.udf import udf
 
 @udf(result_type='MAP<STRING, STRING>')
 def parse_log(line: str):
     try:
+        start_time = time.time() * 1000
         pattern = re.compile(
             r'(?P<ip>\S+) - - \[(?P<datetime>[^\]]+)\] time:(?P<response_time>[\d.]+) s "(?P<method>[A-Z]+) (?P<url>\S+) (?P<protocol>[^"]+)" (?P<status>\d{3}) (?P<size>\d+) "[^"]*" "(?P<user_agent>[^"]+)"'
         )
@@ -29,7 +31,8 @@ def parse_log(line: str):
                 'responseTime': gd['response_time'],
                 'responseCode': gd['status'],
                 'responseByte': gd['size'],
-                'user-agent': gd['user_agent']
+                'userAgent': gd['user_agent'],
+                'start_time': str(start_time)
             }
         else:
             return {}

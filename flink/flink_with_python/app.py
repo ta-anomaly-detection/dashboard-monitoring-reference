@@ -33,7 +33,6 @@ logging.basicConfig(
 
 def process_row_with_timing(row):
     """Process a row and measure the processing time in milliseconds"""
-    start_time = time.time() * 1000  # Convert to milliseconds
     
     # Process the row data
     processed_row = Row(
@@ -47,7 +46,7 @@ def process_row_with_timing(row):
         int(row.response_code) if row.response_code else 0,  # Handle nulls
         int(row.response_byte) if row.response_byte else 0,  # Handle nulls
         row.user_agent,
-        time.time() * 1000 - start_time  # Calculate processing time in milliseconds
+        time.time() * 1000 - float(row.start_time)  # Calculate processing time in ms
     )
     
     return processed_row
@@ -55,9 +54,6 @@ def process_row_with_timing(row):
 def kafka_sink_example():
     env = StreamExecutionEnvironment.get_execution_environment()
 
-    # Set event time as the time characteristic
-    env.set_stream_time_characteristic(TimeCharacteristic.EventTime)
-    
     env.add_jars("file:///jars/flink-sql-connector-kafka-3.0.1-1.18.jar")
     env.add_jars("file:///jars/flink-connector-jdbc-3.1.2-1.17.jar")
     env.add_jars("file:///jars/mysql-connector-java-8.0.28.jar")
@@ -93,7 +89,8 @@ def kafka_sink_example():
             parsed['responseTime'] AS `response_time`,
             parsed['responseCode'] AS `response_code`,
             parsed['responseByte'] AS `response_byte`,
-            parsed['userAgent'] AS `user_agent`
+            parsed['userAgent'] AS `user_agent`,
+            parsed['start_time'] AS `start_time`
         FROM (
             SELECT parse_log(line) AS parsed
             FROM raw_logs
@@ -101,9 +98,6 @@ def kafka_sink_example():
     """)
 
     data_stream = t_env.to_data_stream(table)
-    
-    # debug
-    # data_stream.print("Data Stream Output")
     
     # Define the doris_row_type only once
     doris_row_type = Types.ROW_NAMED(
@@ -142,7 +136,6 @@ def kafka_sink_example():
         jdbc_connection_options=jdbc_options
     )
     
-    # Create ONLY ONE doris_stream with properly typed output and processing time measurement
     doris_stream = data_stream.map(
         process_row_with_timing,
         output_type=doris_row_type
