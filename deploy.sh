@@ -59,36 +59,6 @@ if [ $? -ne 0 ]; then
 fi
 echo "Web DB migrations completed successfully."
 
-### 3. Start Flink ###
-echo "Starting Flink Consumer..."
-(cd flink && docker-compose up --build -d)
-
-echo "Waiting for Flink JobManager on port 8081..."
-wait_for_port "localhost" "8081"
-
-# echo "Submitting Flink job in background mode..."
-# docker exec flink-app-1 /flink/bin/flink run -py /taskscripts/app.py --jobmanager jobmanager:8081 --target local
-
-# echo "Waiting for Flink job to be submitted..."
-# sleep 5
-
-# # Check if the job is running
-# JOB_STATUS=$(docker exec flink-app-1 curl -s http://jobmanager:8081/jobs/overview | grep -o '"state":"[A-Z]*"' | head -1 || echo "No jobs found")
-# if [[ $JOB_STATUS == *"RUNNING"* ]]; then
-#   echo "✅ Flink job successfully submitted and running in background."
-# else
-#   echo "⚠️  Flink job submission completed, but job status could not be verified."
-#   echo "Please check the Flink dashboard at http://localhost:8081 for job status."
-# fi
-
-### 4. Start Redis ###
-# echo "Starting Redis..."
-# (cd redis && docker-compose up --build -d)
-
-# echo "Waiting for Redis to be ready..."
-# wait_for_port "localhost" "6379"
-# echo "Redis is ready!"
-
 ### 5. Start Doris ###
 echo "Starting Doris..."
 (cd doris && docker-compose up --build -d)
@@ -139,6 +109,10 @@ for file in $(docker exec doris-fe-1 /bin/sh -c "ls $MIGRATION_DIR/*.sql"); do
   fi
 done
 echo "Doris tables migrated successfully!"
+
+### 3. Start Flink ###
+echo "Starting Flink Consumer..."
+(cd flink-java && docker-compose up --build -d)
 
 ### 6. Start Prometheus ###
 echo "Starting Prometheus..."

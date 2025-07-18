@@ -1,0 +1,51 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'com.github.johnrengelman.shadow' version '7.1.2'
+}
+
+group = 'com.flink'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+    maven { url "https://packages.confluent.io/maven" }
+}
+
+ext {
+    flinkVersion = '1.18.0'
+    dorisFlinkConnectorVersion = '25.1.0'
+}
+
+dependencies {
+    implementation "org.apache.flink:flink-streaming-java:${flinkVersion}"
+    implementation "org.apache.flink:flink-clients:${flinkVersion}"
+    implementation "org.apache.flink:flink-connector-kafka:3.0.1-1.18"
+    implementation "org.apache.flink:flink-table-api-java:${flinkVersion}"
+    implementation "org.apache.flink:flink-table-common:${flinkVersion}"
+    implementation "org.apache.doris:flink-doris-connector-1.18:${dorisFlinkConnectorVersion}"
+    implementation "org.apache.flink:flink-metrics-prometheus:${flinkVersion}"
+    implementation "org.apache.flink:flink-runtime-web:${flinkVersion}"
+}
+
+application {
+    mainClass = 'com.flink.KafkaDorisRowData'
+}
+
+shadowJar {
+    archiveBaseName = 'flink-java'
+    archiveClassifier = ''
+    archiveVersion = '1.0-SNAPSHOT'
+    
+    // dependencies {
+    //     exclude(dependency('org.apache.flink:flink-streaming-java'))
+    //     exclude(dependency('org.apache.flink:flink-clients'))
+    //     exclude(dependency('org.apache.flink:flink-core'))
+    // }
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+build.dependsOn shadowJar

@@ -18,7 +18,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 6,
+  "id": 1,
   "links": [],
   "panels": [
     {
@@ -122,7 +122,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "disableTextWrap": false,
-          "editorMode": "builder",
+          "editorMode": "code",
           "expr": "rate(doris_be_load_rows[1m])",
           "fullMetaSearch": false,
           "includeNullMetadata": false,
@@ -712,7 +712,7 @@
           "format": "table",
           "hide": false,
           "rawQuery": true,
-          "rawSql": "SELECT\n  MIN(latency_sec) AS min_latency_seconds,\n  MAX(latency_sec) AS max_latency_seconds,\n  AVG(latency_sec) AS avg_latency_seconds,\n  PERCENTILE_APPROX(latency_sec, 0.5) AS p50_latency_seconds,\n  PERCENTILE_APPROX(latency_sec, 0.95) AS p95_latency_seconds,\n  PERCENTILE_APPROX(latency_sec, 0.99) AS p99_latency_seconds\nFROM (\n  SELECT\n    TIMESTAMPDIFF(SECOND, time, ingestion_time) AS latency_sec\n  FROM web_server_logs\n  WHERE time IS NOT NULL AND ingestion_time IS NOT NULL\n  ORDER BY ingestion_time ASC\n  LIMIT 1000000 OFFSET 2\n) AS filtered;",
+          "rawSql": "SELECT\n  MIN(latency_sec) AS min_latency_seconds,\n  MAX(latency_sec) AS max_latency_seconds,\n  AVG(latency_sec) AS avg_latency_seconds,\n  PERCENTILE_APPROX(latency_sec, 0.5) AS p50_latency_seconds,\n  PERCENTILE_APPROX(latency_sec, 0.95) AS p95_latency_seconds,\n  PERCENTILE_APPROX(latency_sec, 0.99) AS p99_latency_seconds\nFROM (\n  SELECT\n    TIMESTAMPDIFF(SECOND, time, ingestion_time) AS latency_sec\n  FROM web_server_logs\n  WHERE time IS NOT NULL AND ingestion_time IS NOT NULL\n  ORDER BY ingestion_time ASC\n  LIMIT 2000\n) AS filtered;",
           "refId": "A",
           "sql": {
             "columns": [
@@ -737,12 +737,95 @@
       "type": "gauge"
     },
     {
+      "datasource": {
+        "type": "mysql",
+        "uid": "PDBCBA2D5BA63F566"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 3,
+          "mappings": [],
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "orange",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 85
+              }
+            ]
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 35
+      },
+      "id": 30,
+      "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": false,
+        "sizing": "auto"
+      },
+      "pluginVersion": "12.0.1",
+      "targets": [
+        {
+          "dataset": "__internal_schema",
+          "editorMode": "code",
+          "format": "table",
+          "hide": false,
+          "rawQuery": true,
+          "rawSql": "SELECT\n  MIN(flink_processing_time_ms) AS min_latency_seconds,\n  MAX(flink_processing_time_ms) AS max_latency_seconds,\n  AVG(flink_processing_time_ms) AS avg_latency_seconds,\n  PERCENTILE_APPROX(flink_processing_time_ms, 0.5) AS p50_latency_seconds,\n  PERCENTILE_APPROX(flink_processing_time_ms, 0.95) AS p95_latency_seconds,\n  PERCENTILE_APPROX(flink_processing_time_ms, 0.99) AS p99_latency_seconds\nFROM (\n  SELECT flink_processing_time_ms\n  FROM web_server_logs\n  WHERE time IS NOT NULL AND ingestion_time IS NOT NULL\n  ORDER BY ingestion_time ASC\n  LIMIT 2000\n) as logs;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Flink Latency",
+      "type": "gauge"
+    },
+    {
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 35
+        "y": 43
       },
       "id": 1,
       "panels": [],
@@ -813,7 +896,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 36
+        "y": 44
       },
       "id": 2,
       "options": {
@@ -837,7 +920,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "rate(container_cpu_usage_seconds_total{name=~\"flink-jobmanager-reference-1|flink-taskmanager-reference-1|flink-app-reference-1|kafka-server-reference|zookeeper-reference|flume-agent|doris-be-1|doris-fe-1|web-server-reference-app|web-server-reference-db|web-server-reference-nginx|grafana\"}[5m]) * 100",
+          "expr": "rate(container_cpu_usage_seconds_total{name=~\"flink-java-flink-job-1|kafka-server-reference|zookeeper-reference|flume-agent|doris-be-1|doris-fe-1|web-server-reference-app|web-server-reference-db|web-server-reference-nginx|grafana\"}[5m]) * 100",
           "instant": false,
           "legendFormat": "{{name}}",
           "range": true,
@@ -911,7 +994,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 36
+        "y": 44
       },
       "id": 3,
       "options": {
@@ -935,7 +1018,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "container_memory_usage_bytes{name=~\"flink-jobmanager-reference-1|flink-taskmanager-reference-1|flink-app-reference-1|kafka-server-reference|zookeeper-reference|flume-agent|doris-be-1|doris-fe-1|web-server-reference-app|web-server-reference-db|web-server-reference-nginx|grafana\"} / 1024 / 1024",
+          "expr": "container_memory_usage_bytes{name=~\"flink-java-flink-job-1|kafka-server-reference|zookeeper-reference|flume-agent|doris-be-1|doris-fe-1|web-server-reference-app|web-server-reference-db|web-server-reference-nginx|grafana\"} / 1024 / 1024",
           "instant": false,
           "legendFormat": "{{name}}",
           "range": true,
@@ -954,8 +1037,8 @@
     "list": []
   },
   "time": {
-    "from": "now-3h",
-    "to": "now"
+    "from": "2025-07-18T10:42:45.000Z",
+    "to": "2025-07-18T10:44:45.000Z"
   },
   "timepicker": {},
   "timezone": "browser",

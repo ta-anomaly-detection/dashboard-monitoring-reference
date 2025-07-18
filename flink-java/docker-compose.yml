@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  flink-job:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "9249:9249"
+      - "8081:8081"
+    networks:
+      dashboard-reference-network:
+        ipv4_address: 172.20.80.53
+
+networks:
+  dashboard-reference-network:
+    external: true

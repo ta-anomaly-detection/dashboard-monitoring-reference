@@ -14,7 +14,7 @@ up-kafka:
 
 up-flink:
 	@echo "Starting Flink..."
-	docker compose -f flink/docker-compose.yml up --build -d
+	docker compose -f flink-java/docker-compose.yml up --build -d
 
 up-doris:
 	@echo "Starting Doris..."
@@ -35,7 +35,7 @@ down-kafka:
 	docker compose -f kafka/docker-compose.yml down -v
 
 down-flink:
-	docker compose -f flink/docker-compose.yml down -v
+	docker compose -f flink-java/docker-compose.yml down -v
 
 down-doris:
 	docker compose -f doris/docker-compose.yml down -v
@@ -48,7 +48,7 @@ down-grafana:
 
 down-all:
 	@echo "Stopping all services..."
-	docker compose -f flink/docker-compose.yml down -v
+	docker compose -f flink-java/docker-compose.yml down -v
 	docker compose -f doris/docker-compose.yml down -v
 	docker compose -f grafana/docker-compose.yml down -v
 	docker compose -f prometheus/docker-compose.yml down -v
@@ -58,7 +58,7 @@ down-all:
 logs:
 	docker compose -f kafka/docker-compose.yml logs -f
 	docker compose -f web-server-reference/docker-compose.yml logs -f
-	docker compose -f flink/docker-compose.yml logs -f
+	docker compose -f flink-java/docker-compose.yml logs -f
 	docker compose -f doris/docker-compose.yml logs -f
 	docker compose -f prometheus/docker-compose.yml logs -f
 	docker compose -f grafana/docker-compose.yml logs -f
